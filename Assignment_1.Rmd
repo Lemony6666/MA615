@@ -1,0 +1,49 @@
+---
+title: "Assignment 1"
+author: "MA615 2021"
+date: "9/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Due: Friday 24 Sept
+
+## This assignment ...
+
+Is a continuation of the assignment we began after the first class.
+
+As you begin using R more, teamwork, production values, internal documentation, and reproducibility will emerge as essential factors affecting the success of your projects. Learning to use the tools that support these success factors is an important part of learning R. In this exercise, you begin with the work that you did in the project where you used the esquisse package to plot some relationships in the mtcars data set.
+
+### Begin by setting up a github repo and cloning it to your local folder for MA615 assignments.
+
+ - Open your github account. 
+ - Set up an organization for your MA615 work.
+ - In the organization, create a new repo for this assignment.
+    + Be sure to check the boxes for (a) creating a readm, (b) creating a .gitignore file using the R template, and (c) including a licence.
+    + Now, follow the instructions from Friday's class and use R to clone your github repo to your local folder -- while initializing git and an rproject at the same time.
+    
+### Now, copy the two R scripts in this assignment to your local disk. 
+
+ - car_viz.R
+ - hand_functions.R
+ 
+
+## Deliverable
+
+ 1. Use car_viz.R as the starting point for a two documents.
+    - html
+    - pdf <br><br>
+
+ 
+ 2. The text of the document should describe the data and discuss what you have learned in this very simple exploration.
+ 
+ 3. The commentary should address the code itself, noting features that may be important to anyone maintaining or using the it.
+ 
+ 4. Turn in your assignment by submitting a link to your github repo on blackboard.  Make sure that the code in your repo will run to produce the documents your submit.  While you might not always choose to push both the source code for a document and the document itself to your github, please do for this assignment.
+ 
+ 
+ 
+ 
