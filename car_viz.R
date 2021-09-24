@@ -18,6 +18,11 @@ source(file = "hand_functions.R", echo = TRUE)
 # Now use the function from hand_functions.R
 
 sp_out <- sum_special(mtcars_mpg2)
+# producing a list:
+# sp_means for mean of every columns
+# sp_var for variation of every columns
+# sp_cov for covariance of every two columns
+# sp_cor for correlation of every two columns
 
 
 # library(esquisse)
