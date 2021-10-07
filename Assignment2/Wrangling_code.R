@@ -1,8 +1,4 @@
-library(dplyr) #for tidy data
-library(openxlsx) #read ".xlsx" file
-library(tidyr) #use to gather data.frame
-library(ggplot2)
-library(ggrepel)
+
 gdp <- read.xlsx("/Users/lengyuanming/Desktop/615/Assignment/MA615_1/Assignment2/Data/gdp_per_capita_yearly_growth.xlsx") # read data file
 hapiness <- read.xlsx("/Users/lengyuanming/Desktop/615/Assignment/MA615_1/Assignment2/Data/hapiscore_whr.xlsx")
 
