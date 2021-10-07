@@ -1,0 +1,29 @@
+---
+title: "Assignment2"
+author: "Yuanming LENG"
+date: "10/7/2021"
+output: html_document
+---
+
+```{r warning=FALSE}
+knitr::opts_chunk$set(comment=NA, echo = FALSE, message = FALSE, warning=FALSE, margin=TRUE)
+options(digits=2)
+```
+
+## sources the “wrangling_code.R” file & sources the “visualization_function.R” file.
+
+```{r}
+source("visualizing_function.R")
+source("wrangling_code.R")
+```
+
+## Including Plots
+
+
+```{r}
+a <-  unique(data_tidy1[order(data_tidy1$value, decreasing = T),]$country)[1:10]
+coountry_compare(a)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
