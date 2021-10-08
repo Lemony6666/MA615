@@ -12,6 +12,7 @@ library(tidyr) #use to gather data.frame
 library(ggplot2)
 library(ggrepel)
 library(flextable)
+library(tidyverse)
 knitr::opts_chunk$set(comment=NA, echo = FALSE, message = FALSE, warning=FALSE, margin=TRUE)
 options(digits=2)
 ```
@@ -66,7 +67,7 @@ flextable(ft) %>% #
 The x lab is year, y lab for the value. And the left plot shows the gdp yearly change between countries. We can see that Rwanda's gdp per person is very outstanding in 2018 and in other years. Correspondingly, the right plot is the income per person for the top 10 gpa countries in 2018. The highest one is  Luxembourg, but Rwanda's income adjusted by purchasing power is relatively low. 
 
 ```{r}
-# use function
+# use function1
 country_compare(data_tibble, country_choose)
 ```
 
@@ -75,6 +76,7 @@ country_compare(data_tibble, country_choose)
 The figure for each country aims to compare gdp and income yearly. The x scale for years we want to compare, and the y scale is the value. 
 
 ```{r}
+# use function2
 id_compare(data_tibble, country_choose)
 ```
 
