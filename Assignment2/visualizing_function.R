@@ -8,7 +8,7 @@ country_compare <- function(data1, country_choose){ #build a function, and the o
                      nudge_x = .75, #the label will far from
                      na.rm = TRUE) +
     theme(legend.position = "none")
-}
+
 
 id_compare <- function(data1, country_choose){ #build a function, and the only interest is an input dataset
   data2 <- data1[data1$country %in% country_choose, ]
@@ -21,6 +21,7 @@ id_compare <- function(data1, country_choose){ #build a function, and the only i
                      na.rm = TRUE) +
     theme(legend.position = "none")
 }
+
 
 
 # add a new function
@@ -42,3 +43,4 @@ country_compare_newadd <- function(data1){
 #' I also add another function to illustrate the comparison between different 
 #' countries by show the GDP with scatter plot.
 #######################
+=======

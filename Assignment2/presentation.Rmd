@@ -1,0 +1,87 @@
+---
+title: "Assignment2"
+author: "Yuanming LENG"
+date: "10/7/2021"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+library(dplyr) #for tidy data
+library(openxlsx) #read ".xlsx" file
+library(tidyr) #use to gather data.frame
+library(ggplot2)
+library(ggrepel)
+library(flextable)
+library(tidyverse)
+knitr::opts_chunk$set(comment=NA, echo = FALSE, message = FALSE, warning=FALSE, margin=TRUE)
+options(digits=2)
+```
+
+```{r}
+source("visualizing_function.R")
+source("wrangling_code.R")
+```
+## Introduction
+
+The data *income* is the gross domestic product per person adjusted for differences in purchasing power. And the data *gdp* is the gross domestic product per person. We compare two data to analyze a country's wealth based on every individual. The differences between income and gdp may describe something about saving or purchasing habits. The "income" we state for this article means "income per person" and also the "gdp" means "gdp per capita". We divided income by 10000 so that we could display income and gdp on the same scale.
+
+```{r}
+data_tibble$year <- as.numeric(data_tibble$year)
+
+#Choosing the year we are interested
+data_tibble <- filter(data_tibble, year %in% 1998:2018)
+
+#dealing with the scale so the income can plot with gdp in same plot
+data_tibble$value[data_tibble$id == "income"] <- (data_tibble$value[data_tibble$id == "income"])/10000
+
+#divided into two sheet
+data_gdp <- data_tibble[data_tibble$id == "gdp",]
+data_income <- data_tibble[data_tibble$id == "income",]
+
+# show the mean value of two dataset
+flextable(summarise(group_by(data_tibble, id),mean(value)))
+```
+
+
+##  Camparing between different countries
+
+We compare income to gdp for different countries, we choose the top10 gdp countries in 2018 and compare their yearly change in gdp and income from 1998 to 2018. The table shows the mean value from 1998 to 2018 of the top10 gpa countries.
+
+```{r}
+#the rule to choose country, choose the top10 country with the highest gdp in 2018
+country_choose  <- na.omit(data_tibble$country[data_tibble$year == 2018][order(data_gdp$value, decreasing = T )])[1:10]
+
+# shows the gdp and income of top10 gdp countries
+gdp_top <- summarise(group_by(data_gdp[data_gdp$country %in% country_choose,],country), mean(value))
+income_top <- summarise(group_by(data_income[data_income$country %in% country_choose,],country), mean(value))
+ft <- merge(gdp_top,income_top, by = "country",all = T)
+names(ft) <- c("Country", "mean.gdp", "mean.income")
+
+# output the table
+flextable(ft) %>% #
+  theme_zebra()
+
+```
+
+
+The x lab is year, y lab for the value. And the left plot shows the gdp yearly change between countries. We can see that Rwanda's gdp per person is very outstanding in 2018 and in other years. Correspondingly, the right plot is the income per person for the top 10 gpa countries in 2018. The highest one is  Luxembourg, but Rwanda's income adjusted by purchasing power is relatively low. 
+
+```{r}
+# use function1
+country_compare(data_tibble, country_choose)
+```
+
+##  Camparing countries' gdp and income
+
+The figure for each country aims to compare gdp and income yearly. The x scale for years we want to compare, and the y scale is the value. 
+
+```{r}
+# use function2
+id_compare(data_tibble, country_choose)
+```
+
+For example, the first plot for Belgium shows their income per person is higher than their gdp per capita, which shows their purchasing power is outstanding.
+
+## Discussion
+
+We plot two figures to compare the countries gdp and their income adjusted in purchasing power. The first plot can easily compare the yearly gdp and income on the country's scale, and the second plot compares in gdp and income on their own scale. However, since the income had been divided by 10000 to comparable to gdp, the comparison in the second plot is meaningless. Also, the gdp and the income calculate in individuals, which is not very reasonable to scale a countries wealth. The scale is for the person, so it also depends on population density—the article shows the function of the usage of ggplot and tidyverse.
