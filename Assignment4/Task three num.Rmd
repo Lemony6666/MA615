@@ -1,0 +1,177 @@
+---
+title: "Task Three tnum"
+author: "Yuanming LENG"
+date: "12/8/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(sentimentr)
+library(tidyverse)
+library(tnum)
+library(magrittr)
+library(tidyverse)
+library(tidytext)
+library(RColorBrewer)
+library(wordcloud)
+library(flextable)
+tnum.authorize("mssp1.bu.edu")
+tnum.setSpace("test2")
+# tnum.getDBPathList(taxonomy = "subject" , levels = 2)
+source('Book2TN-v6A-1.R')
+# tnBooksFromLines(Happyprince$text, 'yuanming/happyprince')
+knitr::opts_chunk$set(echo = F,message = FALSE, comment = NA, warning = FALSE)
+```
+
+# Task Three
+
+## Exploring package *tnum* to cut text by section
+
+```{r}
+# find how many sections we have
+w3 <- tnum.query("yuanming/happyprince/heading# has text")
+wdf3 <- tnum.objectsToDf(w3)
+
+# find locations for each section
+w4 <- tnum.query("yuanming/happyprince/heading# has ordinal")
+wdf4 <- tnum.objectsToDf(w4)
+
+#build a tibble include section name and location
+chapter_locations <- left_join(select(wdf3, subject, string.value), 
+                               select(wdf4, subject, numeric.value)) 
+# cut text by sections
+a <- 1
+a <- str_pad(as.character(a),4,side="left",pad="0")
+b <- paste0("yuanming/happyprince/section:",a,"#", " has text")
+w6 <- tnum.query(b, max = 2000)
+wdf6 <- tnum.objectsToDf(w6)
+wdf6$subject <- rep(chapter_locations$string.value[1], nrow(wdf6)) #add section labels 
+wdf6 <- wdf6[,c(1,3)]
+
+for (i in 2:5) {
+  a1 <- i
+a1 <- str_pad(as.character(a1),4,side="left",pad="0")
+b1 <- paste0("yuanming/happyprince/section:",a1,"#", " has text")
+w61 <- tnum.query(b1, max = 2000)
+wdf61 <- tnum.objectsToDf(w61)
+wdf61$subject <- rep(chapter_locations$string.value[i], nrow(wdf61))# add label for each section
+wdf61 <- wdf61[,c(1,3)]
+wdf6 <- rbind(wdf6, wdf61)
+}
+
+flextable(head(wdf6)) %>% autofit()
+```
+
+## Exploring package *sentimentr*
+
+```{r}
+# Building a data frame including a judgment for each sentence and 
+debates <- wdf6 %>% filter(nchar(wdf6$string.value) != 0)  
+debates_with_pol <- wdf6 %>% 
+  get_sentences() %>% 
+  sentiment() %>% 
+  mutate(polarity_level = ifelse(sentiment < 0.2, "Negative",
+                                 ifelse(sentiment > 0.2, "Positive","Neutral")))
+
+debates_with_pol$sentiment <- debates_with_pol$sentiment - 0.2
+debates_with_pol %>% ggplot(mapping = aes(x = subject, y = sentiment, fill =polarity_level)) + geom_violin(alpha = 0.6)+ theme(axis.text.x = element_text(angle = 45))
+# debates_with_pol %>% group_by(subject)%>% count(polarity_level, order = T) %>%
+# ggplot(mapping=aes(x = (polarity_level), y = n)) + geom_col(aes(fill = polarity_level)) +facet_wrap(~ factor(subject))
+```
+
+The plot shows that the Rocket story includes more negative words. It highly matches with the plot. The rocket is very sad story.
+
+```{r}
+happyprince <- wdf6 %>%
+  mutate(linenumber = 1:nrow(wdf6),
+         ) %>%
+  unnest_tokens(word, string.value) %>%
+  anti_join(stop_words)
+
+count <- happyprince %>% group_by(subject) %>% 
+count(word, sort=T) %>% mutate(word = reorder(word, n)) %>% filter( n > 8)
+
+mycolors <- colorRampPalette(brewer.pal(8, "Set2"))(20)
+count %>%
+ ggplot(mapping=aes(n, word)) + geom_col(aes(fill = subject),show.legend = FALSE) + labs(y = NULL) +
+  geom_text(aes(label=n))+  
+  scale_fill_manual(values= mycolors) + facet_wrap( ~ subject, scales = "free")
+```
+
+The first plot shows the keyword of The Devoted Fiend; the story talks about two men who is a friend and one man who lives in the water miller; one man had a garden. 
+The second plot shows a story about *swallow* and a *happy prince*; the happy prince is a *beautiful statue*.
+In the third plot related to The Nightingale and Rose, a *student* deals with a *nightingale* and gives him a *rose*. 
+The fourth plot-related The Remarkable Rocket: This story concerns a *rocket*, one of many to be let off at the wedding of a *prince* and *princess.*
+The last plot refers to The Selfish Giant: a *giant* which owns a *beautiful* garden with 12 peaches *trees* and lovely fragrant flowers, in which *children* love to play after returning from school.
+
+Compared to the previous report, the words count considered stories from different stories, so it was more obvious to see the main plot of each story.
+
+## Comapring 3 lexicons and sentimentr package in sentence level
+
+```{r}
+# debates_with_pol %>%
+# ggplot(aes(element_id, sentiment, fill = subject)) +
+#   geom_col(show.legend = FALSE) +
+#   facet_wrap(~subject, ncol = 1, scales = "free_y")
+```
+
+```{r}
+AFINN <- read.csv("afinn.csv")
+BING <- read.csv("bing.csv")
+NRC <- read.csv("nrc.csv")
+
+
+
+afinn <- happyprince %>% 
+  inner_join(AFINN) %>% #use lexicon to evaluate words
+  group_by(index = linenumber,subject = subject) %>%  
+  summarise(sentiment = sum(value)) %>% # cut every sentence then sum the words evaluation score for very sentence
+  mutate(method = "AFINN") #add label for each lexicon
+
+```
+
+
+```{r}
+bing_and_nrc <- bind_rows(
+  happyprince %>% 
+    inner_join(BING) %>%#use lexicon 'bing' to evaluate words
+    mutate(method = "Bing et al."), # add lexicon label
+  happyprince %>% 
+    inner_join(NRC) %>%  #use lexicon 'nrc' to evaluate words
+                 filter(sentiment %in% c("positive", 
+                                         "negative") # only chose words which labeled "positive " or "negative"
+    ) %>%
+    mutate(method = "NRC"))
+
+#calculate summary of each sentence
+bing_and_nrc$sentiment <- ifelse(bing_and_nrc$sentiment == "positive", 1,-1) 
+bing_and_nrc <- bing_and_nrc %>% group_by(subject, linenumber,method)%>% summarise(sentiment = sum(sentiment))
+bing_and_nrc <- data.frame(index= bing_and_nrc$linenumber, subject = bing_and_nrc$subject, sentiment = bing_and_nrc$sentiment, method = bing_and_nrc$method)
+
+# combine with values calculate by sentimentr package
+debates_subject <- data.frame(index = debates_with_pol$element_id, subject = debates_with_pol$subject, sentiment = debates_with_pol$sentiment, method = rep("Pkg.sentimentr", nrow(debates_with_pol))) 
+
+bind_rows(afinn, 
+          bing_and_nrc,debates_subject) %>%
+  ggplot(aes(index, sentiment, fill = subject)) +
+  geom_col(show.legend = FALSE) + geom_smooth(show.legend = FALSE)+
+  facet_grid(method~subject, scales = "free" )
+```
+
+Comparing three lexicons with package 'sentmentr', overall, this package seems to produce a more negative result based on cut point 0.2. Since the first four stories tell a lesson about bad conduct that will have a sad outcome, we can see more negative words at the end of the stories in 4 different methods. The Selfish Giant with a happy ending and four lexicons give the same result.
+
+The smooth line shows that the 'afinn' lexicon evaluates more specific words, making the smooth lines less stable. But generally, the peaks of words evaluation for each book in the different methods are very similar.
+
+# Reference
+
+[1] https://en.wikipedia.org/wiki/The_Happy_Prince_and_Other_Tales#The_Selfish_Giant
+
+[2] Haviland Wright, tnum_instructions and examples, https://learn.bu.edu/ultra/courses/_80585_1/cl/outline
+
+[3] sentimentr package – https://github.com/trinker/sentimentr
+
+[4] https://www.r-bloggers.com/2020/04/sentiment-analysis-in-r-with-sentimentr-that-handles-negation-valence-shifters/
+
+
+
+

@@ -1,0 +1,167 @@
+---
+title: "Text Mining"
+author: "Yuanming LENG"
+date: "12/6/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(gutenbergr)
+library(magrittr)
+library(tidyverse)
+library(tidytext)
+library(RColorBrewer)
+library(wordcloud)
+require(RColorBrewer) 
+source('Book2TN-v6A-1.R')
+knitr::opts_chunk$set(echo = F,message = FALSE, comment = NA, warning = FALSE, fig.width=6, fig.height=4)
+```
+
+# Task one
+
+```{r}
+Happyprince <- gutenberg_download(902)
+```
+
+The Happy Prince and Other Tales (or Stories) is a collection of stories for children by Oscar Wilde first published in May 1888. It contains five stories: "The Happy Prince", "The Nightingale and the Rose", "The Selfish Giant", "The Devoted Friend", and "The Remarkable Rocket". And the five stories in this book are unrelated. This five stories are very meaningful for children. 
+
+# Task two
+
+## Cuting words 
+
+```{r}
+# make the text tidy (have excluded stop words): build a tibble include gutenberg_id, linenumber, chapter, word; the word will cut from text
+warpeace <- Happyprince %>%
+  mutate(linenumber = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+                                                 ignore_case = TRUE)))) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) #remove stop words
+
+mycolors <- colorRampPalette(brewer.pal(8, "Set2"))(24)
+# graph the frequencies of words which shows up more than 500 times
+count <- warpeace %>% count(word, sort=T) %>% mutate(word = reorder(word, n))
+filter(count, n > 30) %>% 
+  ggplot(mapping=aes(n, word)) + geom_col(aes(fill = word)) + labs(y = NULL) +
+  geom_text(aes(label=n))+  
+  scale_fill_manual(values= mycolors)
+
+```
+
+According to the plot,  we choose words count over 30 and we found those words covered for all five stories. For example, *tree* for The Selfish Giantt, *prince* and *swallow* for The Happy Prince, *rocket* for *The Remarkable Rocke*, *rose* for *The Nightingale and the Rose*.
+
+```{r}
+# make a cloud graph
+pal2 <- brewer.pal(8,"Set2")
+count %>%with(wordcloud(word, n, colors=pal2,random.order=F, max.words = 1000))
+```
+
+The largest character in the icloud plot also shows key words for five stories.
+
+## Sentiment Analysis
+
+### Lexicon : nrc
+
+```{r}
+# do the sentiment analysis using NRC lexicon
+library(tidytext)
+library(textdata)
+# NRC <- get_sentime1nts('nrc')
+# write.csv(NRC,"nrc.csv")
+NRC <- read.csv("nrc.csv")
+warpeace_nrc <- inner_join(count, NRC)
+#count words and order them
+count_nrc <- warpeace_nrc %>% count(sentiment, sort=T) %>% mutate(sentiment = reorder(sentiment, n))
+
+# plot by word counts
+count_nrc %>% ggplot(mapping=aes(x = n, y = sentiment)) + geom_col(aes(fill = sentiment)) + labs(y = NULL) +
+  geom_text(aes(label=n)) +  
+  scale_fill_manual(values= mycolors)
+```
+
+Using NRC lexicon to analysis the book, then according to the plot, this book contains more positive words. 
+
+### Lexicon : bing
+
+```{r}
+# do the sentiment analysis using Bing lexicon
+BING <- read.csv("bing.csv")
+warpeace_bing <- inner_join(warpeace, BING) %>% mutate(index = linenumber %/% 400)
+#count for words
+count_bing <- warpeace_bing %>% count(word, sort=T) %>% mutate(word = reorder(word, n))
+#fill sentiment for each word
+count_bing$sentiment [count_bing$word %in% warpeace_bing$word] <- warpeace_bing$sentiment[warpeace_bing$word %in% count_bing$word ]
+
+#plot for words count more than 5
+count_bing%>% filter(n > 5) %>%ggplot(mapping=aes(x = (word), y = n)) + geom_col(aes(fill = sentiment)) + labs(y = NULL) +
+  geom_text(aes(label=n)) + facet_wrap( ~ factor(sentiment), scales="free") + theme(axis.text.x = element_text(angle = 45))
+
+```
+
+According to the plot, the book talks more positive words when analysis it in the NRC lexicon.
+
+```{r}
+
+index_bing <- warpeace_bing %>% group_by(index) %>%
+              mutate(whether = ifelse(sentiment == 'positive', 1, 0)) %>% 
+              summarize(value = sum(whether))
+ggplot(data = index_bing, mapping = aes(x=index, y=value)) + geom_col(aes(fill=index), show.legend = F) +
+  labs(title='the sentiments scores across the article') + geom_smooth(se = F, color='orange', size = 1.5)
+
+```
+
+### Lexicon: AFINN
+
+```{r}
+# AFINN <- get_sentiments("afinn")
+# write.csv(AFINN, "afinn.csv")
+AFINN <- read.csv("afinn.csv")
+afinn <- warpeace %>% 
+  inner_join(AFINN) %>% #use lexicon to evaluate words
+  group_by(index = linenumber %/% 10) %>%  
+  summarise(sentiment = sum(value)) %>% # cut every 10 lines then sum the words evaluationscore for wvery 10 lines
+  mutate(method = "AFINN") #add label for each lexicon
+```
+
+### Comparation for three lexicons
+
+```{r}
+# BING <- get_sentiments("bing")
+# write.csv(BING, "bing.csv")
+bing_and_nrc <- bind_rows(
+  warpeace %>% 
+    inner_join(BING) %>%#use lexicon 'bing' to evaluate words
+    mutate(method = "Bing et al."), # add lexicon label
+  warpeace %>% 
+    inner_join(NRC) %>%  #use lexicon 'nrc' to evaluate words
+                 filter(sentiment %in% c("positive", 
+                                         "negative")) # only chose words which labeled "positive " or "negative"
+  %>%
+    mutate(method = "NRC")) %>% # add lexicon label
+  count(method, index = linenumber %/% 10, sentiment) %>%  #count different sentiments for every 10 lines
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative) #Calculate the total sentiment count for every 10 lines; every positive word adds 1, and every negative word minus 1.
+
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+The plot shows that in different lexicons, the book has different proportions for the positive and negative parts. Since there are different summarize methods for different lexicons.  In the 'afinn' lexicon, the value calculates by sum each word's value for every ten lines, and it may conclude a broader range.  In the 'NRC' and 'bing' lexicon, they label each word. 'bing' marks each word as positive or negative, while 'NRC' will label of brutal ways and we only choose words which are marked as positive or negative, which means we will drop many values. In the NRC lexicon, we have more positive values. But with the 'bing' lexicon, we have more negative values.
+
+Also, we should consider that this book talks about five fairy tales, and five tales are independent. Five different stories have different characters, plots, and sentiments, so it is hard to say whether the figure matches the plot. More reliable analysis should plot the sentiment for five parts of this book, respectively.
+
+# Reference
+
+[1] https://www.r-bloggers.com/2020/04/sentiment-analysis-in-r-with-sentimentr-that-handles-negation-valence-shifters/
+
+[2] https://github.com/MA615-XihaoCao/HW4
+
+[3] https://www.tidytextmining.com/sentiment.html
+
+[4] https://en.wikipedia.org/wiki/The_Happy_Prince_and_Other_Tales#The_Selfish_Giant
+
